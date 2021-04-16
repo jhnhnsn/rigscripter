@@ -37,8 +37,9 @@ serial_config_dict["stopbits"] = "2"
 serial_config_dict["bytesize"] = "8"
 serial_config_dict["timeout"] = "0.1"
 
+autoconfigure()
 
 #write config to serial config file
-print("Writing to config file: {}".format(RIG_SERIAL_CONFIG_FILE))
-with open(RIG_SERIAL_CONFIG_FILE, 'w') as f:
-    json.dump(serial_config_dict, f)
+#print("Writing to config file: {}".format(RIG_SERIAL_CONFIG_FILE))
+#with open(RIG_SERIAL_CONFIG_FILE, 'w') as f:
+#    json.dump(serial_config_dict, f)
