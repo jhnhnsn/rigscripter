@@ -1,8 +1,10 @@
 import serial
 import json
 import logging
+from os import listdir, path
 
-RS_CONFIG_FILE = './rs_config.json'
+script_dir = path.dirname(path.abspath(__file__))
+RS_CONFIG_FILE = path.join(script_dir, 'rs_config.json')
 
 #read global config file
 def read_rs_config_file():
