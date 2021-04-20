@@ -1,4 +1,5 @@
-## **** TODO ACTUALLY TEST THIS ***
+## **** TODO ACTUALLY TEST THIS ****
+### **** TODO use "friendly" commands and rig profile instead of raw commands ****
 
 #Send raw command strings to rig and print out raw responses
 #example commands for testing: 'FB147960000', 'FA146960000', 'FB', 'MT001'
