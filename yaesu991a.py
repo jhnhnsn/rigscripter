@@ -31,12 +31,13 @@ def atcontrol(state):
     elif state == "off":
         cmd = "AC000"
     out = rsutils.send_rig_cmd(cmd)
+    return out
 
 def atstart():
     #To be tested
     cmd = "AC002"
     out = rsutils.send_rig_cmd(cmd)
-  
+    return out
 
 # "300":   {"catcmd": "AG", "desc": "AF GAIN"},
 # "400":   {"catcmd": "AI", "desc": "AUTO INFORMATION"},
