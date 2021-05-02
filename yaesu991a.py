@@ -1,51 +1,90 @@
-## FT991a operating manual
+## FT991a operating manual: http://www.hfelectronics.nl/docs/Manuals/FT-991A_Manual.pdf
 ## CAT commands manual: https://www.yaesu.com/downloadFile.cfm?FileID=13370&FileCatID=158&FileName=FT%2D991A%5FCAT%5FOM%5FENG%5F1711%2DD.pdf&FileContentType=application%2Fpdf
+## TODO: Add try except blocks around send commands
+## TODO: Add custom exceptions for each command function
 
-import rsutils #project import
+from rsutils import send_rig_cmd, rslog, strip_prefix, strip_menu_return #project import
 
-## SWAP VFOS
-# {"catcmd": "AB", "desc": "VFO-A TO VFO-B"},
+#Yaesu F991a globals 
+#TODO: Maybe move to a config file
+VFO_A = "A"
+VFO_B = "B"
+VALID_VFO = [VFO_A, VFO_B]
+VFO_FREQ_MIN_HZ = 30000         #.03Mhz
+VFO_FREQ_MAX_HZ = 470000000     #470MHz
+AF_GAIN_MIN = 0
+AF_GAIN_MAX = 254
+CAT_RATES = {
+    0: 4800,
+    1: 9600,   
+    2: 19200,  
+    3: 38400,  
+}
+
+## SWAP VFOS - TODO: combine into one functions?
+# {"catcmd": "AB", "desc": "VFO-A TO VFO-B"}
 def atob():
     cmd = "AB"
-    out = rsutils.send_rig_cmd(cmd)    
-    print(str(out))
+    out = send_rig_cmd(cmd)    
 
 # {"catcmd": "BA", "desc": "VFO-B TO VFO-A"},
 def btoa():
     cmd = "BA"
-    rsutils.send_rig_cmd(cmd)  
+    send_rig_cmd(cmd)  
 
-## ANTENNA TUNER CONTROL
-# {"catcmd": "AC", "desc": "ANTENNA TUNER CONTROL"},
-def atstate():
+## Antenna tuner control
+# {"catcmd": "AC", "desc": "ANTENNA TUNER CONTROL"}
+def get_at():
     cmd =   "AC"
-    out = rsutils.send_rig_cmd(cmd)
+    out = send_rig_cmd(cmd)
     if(out == "AC001"):
         return True
     elif(out == "AC000"):
         return False
     
-def atcontrol(state):
-    if state == "on":
+def set_at(at_state):
+    cmd = ""
+    if at_state == True:
         cmd = "AC001"
-    elif state == "off":
+    elif at_state == False:
         cmd = "AC000"
-    out = rsutils.send_rig_cmd(cmd)
+    else:
+        rslog("Invalid command for set_at(). Options are True or False (on/off)")
+    out = send_rig_cmd(cmd)
     return out
 
-def atstart():
-    #To be tested
+def start_at():
+    #To be tested. No dummy load for the rig :-(
     cmd = "AC002"
-    out = rsutils.send_rig_cmd(cmd)
+    out = send_rig_cmd(cmd)
     return out
 
-# "300":   {"catcmd": "AG", "desc": "AF GAIN"},
+## AF Gain controls
+# {"catcmd": "AG", "desc": "AF GAIN"}
+def get_afgain():
+    cmd = "AG0"
+    out = send_rig_cmd(cmd)
+    #strip command prefix and convert to int
+    out = out[3:]
+    out = int(out)
+    return(out)
+
+# Sets  the  receiver  audio  volume  level.
+def set_afgain(gain):
+    #check arg input between 0 - 254
+    if(gain >= AF_GAIN_MIN and gain <= AF_GAIN_MAX):    
+        #convert to 3 digits and string
+        gain = ('{0:03d}'.format(gain))
+        gain = str(gain)
+        cmd = "AG0" + str(gain)
+        out = send_rig_cmd(cmd)
+        return True 
+    else:
+        rslog("set_afgain() value not in range")
+        return False
+
 # "400":   {"catcmd": "AI", "desc": "AUTO INFORMATION"},
 # "500":   {"catcmd": "AM", "desc": "VFO-A TO MEMORY CHANNEL"},
-  
-
-
-
 # "700":   {"catcmd": "BC", "desc": "AUTO NOTCH"},
 # "800":   {"catcmd": "BD", "desc": "BAND DOWN"},
 # "900" :  {"catcmd": "BI", "desc": "BREAK-IN"},
@@ -64,15 +103,188 @@ def atstart():
 # "2200" : {"catcmd": "ED", "desc": "ENCORDER DOWN"},
 # "2300" : {"catcmd": "EK", "desc": "ENT KEY"},
 # "2400" : {"catcmd": "EU", "desc": "ENCORDER UP"},
-# "2500" : {"catcmd": "EX", "desc": "MENU"},
-# "2600" : {"catcmd": "FA", "desc": "FREQUENCY VFO-A"},
-# "2700" : {"catcmd": "FB", "desc": "FREQUENCY VFO-B"},
+
+# {"catcmd": "EX", "desc": "MENU"}
+## Menu item cmd format EX12312345678
+
+#menu item 031 CAT RATE
+def get_catrate():
+    cmd = "EX031"
+    out = send_rig_cmd(cmd)
+    out = strip_prefix(out)
+    out = strip_menu_return(out)
+    out = CAT_RATES[int(out)]
+    
+    return out
+    
+#def set_catrate():
+#    return False
+
+
+## Get and set VFO frequencies
+# {"catcmd": "FA", "desc": "FREQUENCY VFO-A"}
+# {"catcmd": "FB", "desc": "FREQUENCY VFO-B"}
+def get_vfo(vfo, format="hz"):
+    vfo = vfo.upper()
+
+    if(vfo in VALID_VFO):
+        cmd = "F" + vfo
+        out = send_rig_cmd(cmd)
+
+        if(format == "hz"):
+            out = out[2:]
+            out = int(out)
+            return out
+        elif(format == "string"):
+            out = out[2:]
+            #make a nice string
+            mhz = str(int(out[0:3]))
+            khz = "{}".format(out[3:6])
+            hz = "{}".format(out[6:9])
+            freqstring = mhz + "." + khz + hz + "MHz"
+            return freqstring
+        elif(format == "raw"):
+            return out
+    else:
+        rslog("Not a valid VFO for get_vfo()")
+        return False
+
+#Set VFO frequency in Hz
+def set_vfo(vfo, freq_hz):
+    vfo = vfo.upper()
+    if(freq_hz >= VFO_FREQ_MIN_HZ and freq_hz <= VFO_FREQ_MAX_HZ):
+        if(vfo in VALID_VFO):
+            freq_padded = "{:0>9d}".format(freq_hz)
+            cmd = "F" + vfo
+            cmd = cmd + str(freq_padded)
+            out = send_rig_cmd(cmd)
+            
+            #No output from radio
+            return True
+        else:
+            rslog("Not a valid VFO for get_vfo()")
+            return False
+    else:
+        rslog("Invalid frequency range for set_vfo() " + str(FREQ_MIN_HZ) + " - " + str(FREQ_MAX_HZ))
+
 # "2800" : {"catcmd": "FS", "desc": "FAST STEP"},
 # "2900" : {"catcmd": "FT", "desc": "FUNCTION TX"},
 # "3000" : {"catcmd": "GT", "desc": "AGC FUNCTION"},
-# "3100" : {"catcmd": "ID", "desc": "IDENTIFICATION"},
-# "3200" : {"catcmd": "IF", "desc": "INFORMATION"},
-# "3300" : {"catcmd": "IS", "desc": "IF-SHIFT"},
+
+## Radio ID
+# Usage: get_id(format) where format=num returns int with ID, 
+# format="name" returns name string, format="raw" returns raw CAT cmd return (minus the ;)
+# {"catcmd": "ID", "desc": "IDENTIFICATION"}
+def get_id(format="name"):
+    cmd = "ID"
+    out = send_rig_cmd(cmd)
+    
+    if(format == "num"):
+        #strip command prefix
+        out = out[3:]           #TODO: use rsutils strip_prefix      
+        out = int(out)          #TODO: move this value to a config file
+        return out
+    elif(format == "name"):
+        return "FT-991A"        #TODO: move this value to a config file
+    elif(format == "raw"):
+        return out
+
+#{"catcmd": "IF", "desc": "INFORMATION"}
+def get_info():
+    cmd = "IF"
+    out = send_rig_cmd(cmd)
+    raw = out #save the raw response for later
+    ret = {}
+    
+    #strip command prefix
+    out = out[2:]
+
+    #3 chars current memory channel
+    ret["active_mem"] = out[0:3]
+    ret["vfoa_freq"] = int(out[3:12])
+    ret["clar_offset"] = int(out[12:17])
+    ret["rx_clar_on"] = bool(out[17:18])  #0 = OFF, 1 = ON
+    ret["tx_clar_on"] = bool(out[18:19])  #0 = OFF, 1 = ON
+
+    op_mode = out[19:20]
+    if(op_mode == "1"):
+        ret["op_mode"] = "LSB"
+    elif(op_mode == "2"): 
+        ret["op_mode"] = "USB"
+    elif(op_mode == "3"):
+        ret["op_mode"] = "CW"
+    elif(op_mode == "4"):
+        ret["op_mode"] = "FM"
+    elif(op_mode == "5"):
+        ret["op_mode"] = "AM"
+    elif(op_mode == "6"):
+        ret["op_mode"] = "RTTY-LSB"
+    elif(op_mode == "7"):
+        ret["op_mode"] = "CW-R"
+    elif(op_mode == "8"):
+        ret["op_mode"] = "DATA-LSB"
+    elif(op_mode == "9"):
+        ret["op_mode"] = "RTTY-USB"
+    elif(op_mode == "A"):
+        ret["op_mode"] = "DATA-FM"
+    elif(op_mode == "B"):
+        ret["op_mode"] = "FM-N"
+    elif(op_mode == "C"):
+        ret["op_mode"] = "DATA-USB"
+    elif(op_mode == "D"):
+        ret["op_mode"] = "AM-N"
+    elif(op_mode == "E"):
+        ret["op_mode"] = "C4FM"
+    else:
+        ret["op_mode"] = "Error?"
+
+    mem_mode = out[20:21] #TODO: find a better name for this
+    if(mem_mode == "0"):
+        ret["mem_mode"] = "VFO"
+    elif(mem_mode == "1"):
+        ret["mem_mode"] = "Memory"
+    elif(mem_mode == "2"):
+        ret["mem_mode"] = "Memory Tune"
+    elif(mem_mode == "3"):
+        ret["mem_mode"] = "Quick Memory Bank (QMB)"
+    else:
+        ret["mem_mode"] = "Error?"
+    
+    code_type = out[21:22]
+    if(code_type == "0"):
+        ret["code_type"] = "CTCSS OFF"
+    elif(code_type == "1"):
+        ret["code_type"] = "CTCSS ENC/DEC"
+    elif(code_type == "2"):
+        ret["code_type"] = "CTCSS ENC"
+    elif(code_type == "3"):
+        ret["code_type"] = "DCS ENC/DEC"
+    elif(code_type == "4"):
+        ret["code_type"] = "DCS ENC"
+    else:
+        ret["code_type"] = "Error?"
+
+    simplex = out[24:25]
+    if(simplex == "0"):
+        ret["simplex"] = "Simplex"
+    elif(simplex == "1"):
+        ret["simplex"] = "Plus Shift"
+    elif(simplex == "2"):
+        ret["simplex"] = "Minus Shift"
+    else:
+        ret["simplex"] = "Error?"
+
+    ret["raw_output"] = raw
+    
+    return ret
+
+# {"catcmd": "IS", "desc": "IF-SHIFT"}
+def get_ifshift():
+    return False
+
+def set_ifshift():
+    return False
+
 # "3400" : {"catcmd": "KM", "desc": "KEYER MEMORY"},
 # "3500" : {"catcmd": "KP", "desc": "KEY PITCH"},
 # "3600" : {"catcmd": "KR", "desc": "KEYER"},

@@ -85,7 +85,7 @@ def send_rig_cmd(cmd):
     ser.write(cmd)
     out = ser.readline()
     out = cmdbin_to_cmdstr(out)
-    rslog("Received --> " + cmdbin_to_cmdstr(out))
+    rslog("Received --> " + out)
     if(out == "?"):
         #TODO: turn this into an exception
         rslog("Got an error - rig returned: " + out)
@@ -96,4 +96,11 @@ def send_rig_cmd(cmd):
         ser.close()
     ser.close()
 
+def strip_prefix(cmd):
+    out = cmd[2:]
+    return out
+
+def strip_menu_return(cmd):
+    out = cmd[3:]
+    return out
 
