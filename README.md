@@ -1,5 +1,9 @@
 # rigscripter
 
+Manuals:
+http://www.hfelectronics.nl/docs/Manuals/FT-991A_Manual.pdf
+https://www.yaesu.com/downloadFile.cfm?FileID=13370&FileCatID=158&FileName=FT%2D991A%5FCAT%5FOM%5FENG%5F1711%2DD.pdf&FileContentType=application%2Fpdf
+
 Module for scripting Yaesu FT991a. Making a module with functions to call CAT commands on my radio. Here's what I have so far:
 
 VFO swaps:
