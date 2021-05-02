@@ -1,8 +1,10 @@
 import serial
+from datetime import datetime
 import json
 import logging
 from os import listdir, path
 
+#Get config file location
 script_dir = path.dirname(path.abspath(__file__))
 RS_CONFIG_FILE = path.join(script_dir, 'rs_config.json')
 
@@ -13,6 +15,14 @@ def read_rs_config_file():
         rs_config = json.load(file)
     return rs_config
 
+
+#get logfle name from global config and start logging
+logging.basicConfig(filename=read_rs_config_file()["logfile"], level=logging.DEBUG)
+
+#logging format
+def rslog(logstring):
+    timestamp = str(datetime.now().strftime("%m-%d-%Y_%H-%M-%S-%f"))
+    logging.debug(timestamp + " : " + logstring)
 
 #read config file and send back a configured serial object
 def get_serial():
@@ -55,27 +65,35 @@ def cmdstr_to_cmdbin(cmd):
 
 
 #convert a binary command to string for output or saving
+#not sure if this is necessary
 def cmdbin_to_cmdstr(cmd):
     #check if it's binary
     if type(cmd) == bytes:
         cmd = cmd.decode('ascii')
+        cmd = cmd.rstrip(';')
         return cmd
     else:
         return "Not binary"
 
 
 #send a command to the rig return the raw response
+#assumes commands are all strings now
 def send_rig_cmd(cmd):
+    rslog("Sending --> " + str(cmd))
     ser = get_serial()
-    if type(cmd) == str:
-        cmd = cmdstr_to_cmdbin()
-        send_rig_cmd(cmd)
-    elif type(cmd) == bytes:
-        ser.write(cmd)
-    else:
-        return "cmd wasn't a a string or bytes."
+    cmd = cmdstr_to_cmdbin(cmd)
+    ser.write(cmd)
     out = ser.readline()
+    out = cmdbin_to_cmdstr(out)
+    rslog("Received --> " + cmdbin_to_cmdstr(out))
+    if(out == "?"):
+        #TODO: turn this into an exception
+        rslog("Got an error - rig returned: " + out)
+        return False
+        ser.close()
+    else:
+        return out
+        ser.close()
     ser.close()
-    return out
 
 
