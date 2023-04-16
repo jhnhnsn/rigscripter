@@ -24,7 +24,7 @@ def doattests():
         print("Must have been an error or something. Shouldn't get here")
 
     ## Start antenna tuner
-    #start_at
+    #start_at()
 
 ##AF gain
 def doafgaintests():
@@ -73,11 +73,13 @@ def dovfotests():
 
     print("Set " + TEST_VFO + " to " + str(TEST_FREQ) + ": " + str(set_vfo(TEST_VFO, TEST_FREQ)))
 
+#Get radio info
 def doinfotests():
     from yaesu991a import get_info
 
     print(get_info())
 
+#Get CAT baud rate
 def docatratemenutests():
     print("**** Running catrate menu tests")
     from yaesu991a import get_catrate
@@ -86,7 +88,7 @@ def docatratemenutests():
 
 
 ## Run test sets
-#doinfotests()
+doinfotests()
 #doswaptests()
 #dovfotests()
 #doattests()

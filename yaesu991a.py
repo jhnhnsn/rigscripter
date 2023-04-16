@@ -165,7 +165,7 @@ def set_vfo(vfo, freq_hz):
             rslog("Not a valid VFO for get_vfo()")
             return False
     else:
-        rslog("Invalid frequency range for set_vfo() " + str(FREQ_MIN_HZ) + " - " + str(FREQ_MAX_HZ))
+        rslog("Invalid frequency range for set_vfo() " + str(VFO_FREQ_MIN_HZ) + " - " + str(VFO_FREQ_MAX_HZ))
 
 # "2800" : {"catcmd": "FS", "desc": "FAST STEP"},
 # "2900" : {"catcmd": "FT", "desc": "FUNCTION TX"},
